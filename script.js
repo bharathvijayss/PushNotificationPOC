@@ -3,6 +3,8 @@ var pwd = null;
 var public_key = null;
 var onNotificationMessageHandler = null;
 var reg = null;
+let notification_requeset_no_response = "No Response";
+let permissionCheckInterval = null;
 
 PushNotificationEnum = Object.freeze({
   NotificationON: "Push-Notification-ON",
@@ -26,11 +28,36 @@ const checkPermission = () => {
 };
 
 const requestNotificationPermission = async () => {
-  const permission = await Notification.requestPermission();
-  if (permission !== "granted") {
-    throw new Error("Notification permission not granted");
+  const permissionPromise = Notification.requestPermission();
+
+  // To handle the Edge browser scenario... of blocking the notification request popup.
+  const timeoutPromise = new Promise((resolve, reject) => {
+    setTimeout(() => resolve(notification_requeset_no_response), 5000);
+  });
+
+  const permission = await Promise.race([permissionPromise, timeoutPromise]);
+
+  if (permission === notification_requeset_no_response) {
+    const infoEle = document.getElementById("info");
+    infoEle.style.color = "white";
+    infoEle.style.backgroundColor = "red";
+    infoEle.innerText =
+      "Notification permission not granted or browser blocked the popup so please manually enable it inroder to get live notifications!!!";
+
+    permissionCheckInterval = setInterval(checkPermissionChange, 3000);
   }
+
+  return permission;
 };
+
+function checkPermissionChange() {
+  if (Notification.permission === "denied") {
+    clearInterval(permissionCheckInterval);
+  } else if (Notification.permission === "granted") {
+    clearInterval(permissionCheckInterval);
+    subscribeForPush();
+  }
+}
 
 const registerSW = async () => {
   const registration = await navigator.serviceWorker.register("sw.js");
@@ -94,7 +121,7 @@ function _notificationMessageHandler(message) {
       break;
     case PushNotificationEnum.NotificationON:
       {
-        registerPushNotificationSubscription();
+        subscribeForPush();
       }
       break;
     case PushNotificationEnum.ShowToastNotification:
@@ -109,37 +136,42 @@ const main = async () => {
   checkPermission();
   await requestNotificationPermission();
   _addEventListeners();
-  // reg = await registerSW();
-  if (reg.active) {
-    // Already Service worker in activated state so directly get the subscription
-    registerPushNotificationSubscription();
-  }
+  subscribeForPush();
 };
 
-function registerPushNotificationSubscription() {
-  reg.pushManager.getSubscription().then((subscription) => {
-    if (!subscription) {
-      initNewSubscription();
-    } else {
-      // Subscription exists only incase of auto logout by session timeout...
-      subscription
-        .unsubscribe()
-        .then((successful) => {
-          initNewSubscription();
-        })
-        .catch((e) => {
-          // Unsubscribing failed
-        });
-    }
-  });
+function subscribeForPush() {
+  // Already Service worker in activated state so directly get the subscription
+  if (reg.active && Notification.permission === "granted") {
+    // registerPushNotificationSubscription();
+    initNewSubscription();
+  }
 }
+
+// function registerPushNotificationSubscription() {
+//   reg.pushManager.getSubscription().then((subscription) => {
+//     if (!subscription) {
+//       initNewSubscription();
+//     } else {
+//       subscription
+//         .unsubscribe()
+//         .then((successful) => {
+//           initNewSubscription();
+//         })
+//         .catch((e) => {
+//           // Unsubscribing failed
+//         });
+//     }
+//   });
+// }
 
 async function initNewSubscription() {
   const subscription = await reg.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: urlBase64ToUint8Array(public_key),
   });
+
   const pushEle = document.getElementById("notification-subscription-result");
+
   saveSubscription(subscription)
     .then(function () {
       pushEle.style.color = "green";
@@ -148,7 +180,7 @@ async function initNewSubscription() {
     .catch(function (err) {
       pushEle.style.color = "red";
       pushEle.innerText = "Error while Storing Push Manager Subscription !!!!";
-      console.log(err);
+      console.error(err);
     });
 }
 
@@ -229,6 +261,13 @@ function logout() {
     });
 }
 
+// landing page or login page... mock
 self.addEventListener("load", async function () {
+  localStorage.clear();
   reg = await registerSW();
+  let activeSubscription = await reg.pushManager.getSubscription();
+  if (activeSubscription) {
+    // Subscription exists incase of logout or auto logout by session timeout...
+    await activeSubscription.unsubscribe();
+  }
 });
