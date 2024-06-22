@@ -137,7 +137,7 @@ app.get("/send-notification", (req, res) => {
             body: "Push Message Body",
             icon: null,
             data: {
-              url: "https://maps.google.com"
+              url: "http://127.0.0.1:5500/notification.html"
             },
             dir: "auto",
             tag: "",

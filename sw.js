@@ -123,8 +123,23 @@ self.addEventListener("push", (e) => {
 });
 
 self.addEventListener("notificationclick", function (event) {
+  event.notification.close();
   // default notification of chrome does not have data value.
   if (event.notification.data) {
-    event.waitUntil(clients.openWindow(event.notification.data.url));
+    event.waitUntil(
+      new Promise(function (resolve, reject) {
+        clients
+          .openWindow(event.notification.data.url)
+          .then(function (windowClient) {
+            if (windowClient && !windowClient.focused) {
+              windowClient.focus().then(function () {
+                resolve();
+              });
+            } else {
+              resolve();
+            }
+          });
+      })
+    );
   }
 });
