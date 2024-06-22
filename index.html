@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Push Notification</title>
+    <style>
+      .mb-2 {
+        margin-bottom: 1rem;
+      }
+
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+      }
+    </style>
+  </head>
+
+  <body>
+    <form id="login-form">
+      <div class="mb-2">
+        <label for="email">Email: </label>
+        <input type="text" name="email" id="email" />
+      </div>
+      <div class="mb-2">
+        <label for="password">Password: </label>
+        <input type="password" name="password" id="password" />
+      </div>
+      <button type="button" onclick="login()">Login</button>
+    </form>
+    <div id="logout-form" style="visibility: hidden;">
+        <p id="login-result"></p>
+        <p id="notification-subscription-result"></p>
+        <button type="button" onclick="logout()">Logout</button>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>
