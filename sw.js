@@ -131,8 +131,10 @@ self.addEventListener("notificationclick", function (event) {
         clients
           .openWindow(event.notification.data.url)
           .then(function (windowClient) {
+            console.log(windowClient.visibilityState);
+            console.log(windowClient.focused);
             if (windowClient && !windowClient.focused) {
-              windowClient.focus().then(function () {
+              windowClient.focus().catch(function(err) {}).finally(function () {
                 resolve();
               });
             } else {
